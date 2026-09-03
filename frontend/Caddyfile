@@ -1,0 +1,36 @@
+{$SITE_ADDRESS::80} {
+    # Proxy Django API requests
+    handle /api/* {
+        reverse_proxy {$BACKEND_HOST:backend:8000}
+    }
+
+    # Proxy Django Admin
+    handle /admin/* {
+        reverse_proxy {$BACKEND_HOST:backend:8000}
+    }
+
+    # Proxy Health check
+    handle /healthz* {
+        reverse_proxy {$BACKEND_HOST:backend:8000}
+    }
+
+    # Serve Django collected static files (admin assets, etc.)
+    handle /static/* {
+        root * /app/staticfiles
+        file_server
+    }
+
+    # Serve built React Single Page Application
+    handle {
+        root * /srv
+        try_files {path} /index.html
+        file_server
+    }
+
+    # Security headers
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}

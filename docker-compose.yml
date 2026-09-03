@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: favvmenuz_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-favvmenuz_db}
+      POSTGRES_USER: ${POSTGRES_USER:-favvmenuz_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-favvmenuz_secure_dev_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-favvmenuz_user} -d ${POSTGRES_DB:-favvmenuz_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: favvmenuz_redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal_net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: favvmenuz_backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=db
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/1}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - django_static:/app/staticfiles
+      - django_media:/app/media
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8000/healthz/\")' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - internal_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: favvmenuz_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      - BACKEND_HOST=backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - django_static:/app/staticfiles:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - internal_net
+
+networks:
+  internal_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  django_static:
+  django_media:
+  caddy_data:
+  caddy_config:

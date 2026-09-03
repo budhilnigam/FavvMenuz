@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Outfit', sans-serif;
+    color: #121212;
+    background-color: #FAF7EE;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Neo-Brutalist Utility Classes */
+.btn-brutal {
+  @apply font-bold border-2 border-black bg-electric-yellow text-ink px-4 py-2 transition-all duration-100 shadow-brutal hover:shadow-brutal-sm hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[4px] active:translate-y-[4px] disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.btn-brutal-coral {
+  @apply font-bold border-2 border-black bg-coral-500 text-white px-4 py-2 transition-all duration-100 shadow-brutal hover:shadow-brutal-sm hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[4px] active:translate-y-[4px] disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.btn-brutal-white {
+  @apply font-bold border-2 border-black bg-white text-ink px-4 py-2 transition-all duration-100 shadow-brutal hover:shadow-brutal-sm hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[4px] active:translate-y-[4px] disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.card-brutal {
+  @apply bg-white border-3 border-black shadow-brutal;
+}
+
+.card-brutal-interactive {
+  @apply bg-white border-3 border-black shadow-brutal transition-all duration-150 hover:shadow-brutal-lg hover:-translate-y-1;
+}
+
+.badge-brutal {
+  @apply inline-flex items-center px-2.5 py-0.5 text-xs font-bold border-2 border-black rounded-none uppercase tracking-wider shadow-[2px_2px_0px_#000];
+}
+
+/* Custom crisp neo-brutalist focus style */
+*:focus-visible {
+  outline: 3px solid #121212;
+  outline-offset: 2px;
+}

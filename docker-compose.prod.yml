@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: favvmenuz_prod_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal_prod_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: favvmenuz_prod_redis
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal_prod_net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: favvmenuz_prod_backend
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - DEBUG=False
+      - POSTGRES_HOST=db
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/1}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - django_prod_static:/app/staticfiles
+      - django_prod_media:/app/media
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8000/healthz/\")' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - internal_prod_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: favvmenuz_prod_frontend
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - SITE_ADDRESS=${SITE_ADDRESS:-:80}
+      - BACKEND_HOST=backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - django_prod_static:/app/staticfiles:ro
+      - caddy_prod_data:/data
+      - caddy_prod_config:/config
+    networks:
+      - internal_prod_net
+
+networks:
+  internal_prod_net:
+    driver: bridge
+
+volumes:
+  postgres_prod_data:
+  django_prod_static:
+  django_prod_media:
+  caddy_prod_data:
+  caddy_prod_config:
