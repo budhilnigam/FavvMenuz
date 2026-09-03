@@ -79,7 +79,7 @@ Add screenshots here after deploying to your AWS Lightsail or local host:
 | **Frontend** | React 18 / TypeScript / Vite | Single Page Application discovery interface |
 | **Styling** | Tailwind CSS (Neo-Brutalist) | High-contrast visual language with thick borders and hard-offset shadows |
 | **Icons & Motion** | `lucide-react` / `framer-motion` | Consistent icons and lightweight micro-interactions |
-| **Web Server** | Caddy v2 | Static file serving, reverse proxying `/api` & `/admin`, automatic TLS |
+| **Web Server** | Caddy v2 | Static file serving, reverse proxying `/api`, automatic TLS |
 | **Process Manager** | Gunicorn | Production WSGI application server |
 | **Deployment** | Docker & Docker Compose on AWS Lightsail | Containerized, single-host deployment pipeline via GitHub Actions |
 
@@ -205,14 +205,16 @@ Before installing, ensure your environment has:
    docker compose exec backend python manage.py seed_demo_data
    ```
 
-5. **(Optional) Create an administrative superuser:**
-   ```bash
-   docker compose exec backend python manage.py createsuperuser
-   ```
+   The default seed is deterministic, offline, and repeatable: it uses fictional restaurant and cuisine menu templates, fixed Noida locality coordinates, and deterministic coordinate jitter. It does not call an AI model.
 
-6. **Open in browser:**
+   For richer varied synthetic data, use the opt-in Bedrock generator:
+   ```bash
+   docker compose run --rm backend python manage.py seed_ai_demo_data --restaurants 24 --items-per-restaurant 12
+   ```
+   The command validates model JSON with Pydantic, assigns coordinates and ratings locally, and marks every record as demo data. Use `--reset` only when intentionally replacing the demo catalog.
+
+5. **Open in browser:**
    - Web Application: [http://localhost](http://localhost)
-   - Django Admin: [http://localhost/admin/](http://localhost/admin/)
    - Health Status: [http://localhost/healthz/](http://localhost/healthz/)
 
 ---

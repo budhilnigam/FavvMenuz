@@ -8,7 +8,7 @@ This manual provides complete, step-by-step instructions for deploying **FavvMen
 
 The production environment runs on a single AWS Lightsail Linux VPS using Docker Compose. All components reside on the same host:
 
-- **Frontend Container (`frontend`)**: Caddy v2 serving the pre-compiled React Single Page Application and proxying `/api/*`, `/admin/*`, and `/healthz` requests to Django. Handles automatic HTTPS certificate provisioning and renewal.
+- **Frontend Container (`frontend`)**: Caddy v2 serving the pre-compiled React Single Page Application and proxying `/api/*` and `/healthz` requests to Django. Handles automatic HTTPS certificate provisioning and renewal.
 - **Backend Container (`backend`)**: Django 5.1 running under Gunicorn with 3 workers on internal port 8000.
 - **Database Container (`db`)**: PostgreSQL 16 Alpine with a persistent named Docker volume (`postgres_prod_data`).
 - **Cache Container (`redis`)**: Redis 7 Alpine on an internal bridge network (`internal_prod_net`).
@@ -161,18 +161,73 @@ POSTGRES_PORT=5432
 # 5. Redis Cache
 REDIS_URL=redis://redis:6379/1
 
-# 6. LLM / AI Configuration (Optional: Leave empty for fallback mode)
-LLM_PROVIDER=openai-compatible
-LLM_BASE_URL=https://api.openai.com/v1
-LLM_API_KEY=
-LLM_MODEL=gpt-4o-mini
+# 6. LLM / AI Configuration
+LLM_PROVIDER=bedrock
+LLM_MODEL=openai.gpt-oss-20b-1:0
+AWS_REGION=us-east-1
+# Prefer an IAM role. For local/API-key authentication only:
+# AWS_ACCESS_KEY_ID=
+# AWS_SECRET_ACCESS_KEY=
+# AWS_SESSION_TOKEN=
 LLM_TIMEOUT_SECONDS=10.0
+BEDROCK_APP_DAILY_LIMIT=30
+BEDROCK_USER_DAILY_LIMIT=5
+BEDROCK_ANONYMOUS_DAILY_LIMIT=2
 
-# 7. Throttling
+# 7. Netlify frontend origin and cross-origin sessions
+CORS_ALLOWED_ORIGINS=https://your-site.netlify.app
+CSRF_TRUSTED_ORIGINS=https://your-api-domain.com,https://your-site.netlify.app
+SESSION_COOKIE_SECURE=True
+CSRF_COOKIE_SECURE=True
+SESSION_COOKIE_SAMESITE=None
+CSRF_COOKIE_SAMESITE=None
+
+# 8. Throttling
 SEARCH_RATE_LIMIT=60/minute
 ```
 
 > **Security Guardrail:** Never commit `.env` to Git. Keep file permissions restricted to `600` (`chmod 600 .env`).
+
+## 6A. Deploying the React Frontend to Netlify
+
+The AWS deployment can continue running the backend, PostgreSQL, Redis, and Caddy. Netlify hosts a separate copy of the React frontend and calls the AWS origin for `/api` requests.
+
+1. Deploy the backend stack using the steps above and assign it a DNS name such as `api.example.com`. Point an A record at the Lightsail static IP and set `SITE_ADDRESS=https://api.example.com`.
+2. In Netlify, choose **Add new site → Import an existing project** and select the repository.
+3. Set these build settings:
+   - Base directory: `frontend`
+   - Build command: `npm run build`
+   - Publish directory: `frontend/dist` (or `dist` if Base directory is set to `frontend` in the Netlify UI)
+4. Add the Netlify environment variable:
+   ```text
+   VITE_API_BASE_URL=https://api.example.com
+   ```
+5. Add a Netlify rewrite so React Router routes work. Create `frontend/public/_redirects` with:
+   ```text
+   /* /index.html 200
+   ```
+6. Copy the final Netlify URL into the backend `.env` values for `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS`, then restart the backend.
+
+Use HTTPS on both domains. Cross-origin session cookies require `SESSION_COOKIE_SAMESITE=None`, `CSRF_COOKIE_SAMESITE=None`, and secure cookies as shown above.
+
+After deployment, test `/healthz/`, registration, login, search, and favorites from the Netlify URL. Do not expose PostgreSQL or Redis ports publicly.
+
+## 6B. Cache and AI quota behavior
+
+- Redis stores parsed search plans, complete search responses, and daily Bedrock counters.
+- Search plans and static search responses are cached for 24 hours.
+- An exact cached search does not consume a Bedrock request quota.
+- Sort/filter changes in the browser do not call the backend or Bedrock.
+- Fresh Bedrock calls are limited to 30 per day for the whole application, 5 per signed-in account, and 2 per anonymous browser session.
+- When a quota is exhausted, the database-backed deterministic parser still returns results and the UI shows the applicable message.
+- Redis is required for quota counts to be truly shared across Gunicorn workers and multiple servers. If Redis is unavailable, Django's local-memory fallback is only per process and should be treated as development-only.
+
+To inspect Redis in production:
+
+```bash
+docker compose -f docker-compose.prod.yml exec redis redis-cli INFO stats
+docker compose -f docker-compose.prod.yml logs --tail=100 backend
+```
 
 ---
 
@@ -201,17 +256,12 @@ Once `.env` is configured, start the stack:
    docker compose -f docker-compose.prod.yml run --rm backend python manage.py seed_demo_data
    ```
 
-5. **Create an administrative user:**
-   ```bash
-   docker compose -f docker-compose.prod.yml run --rm backend python manage.py createsuperuser
-   ```
-
-6. **Start all application containers:**
+5. **Start all application containers:**
    ```bash
    docker compose -f docker-compose.prod.yml up -d
    ```
 
-7. **Verify health check:**
+6. **Verify health check:**
    ```bash
    curl -I http://localhost/healthz/
    ```
