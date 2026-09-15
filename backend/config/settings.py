@@ -80,6 +80,7 @@ POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD')
 POSTGRES_HOST = os.getenv('POSTGRES_HOST')
 POSTGRES_PORT = os.getenv('POSTGRES_PORT', '5432')
 USE_SQLITE = os.getenv('USE_SQLITE', 'False').lower() in ('true', '1', 'yes')
+DB_CONN_MAX_AGE = int(os.getenv('DB_CONN_MAX_AGE', '0' if DEBUG else '60'))
 
 if POSTGRES_HOST and not USE_SQLITE:
     DATABASES = {
@@ -90,7 +91,8 @@ if POSTGRES_HOST and not USE_SQLITE:
             'PASSWORD': POSTGRES_PASSWORD or 'favvmenuz_secure_dev_password',
             'HOST': POSTGRES_HOST,
             'PORT': POSTGRES_PORT,
-            'CONN_MAX_AGE': 60,
+            'CONN_MAX_AGE': DB_CONN_MAX_AGE,
+            'CONN_HEALTH_CHECKS': True,
         }
     }
 else:
@@ -181,9 +183,6 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1')
 CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'False').lower() in ('true', '1')
 
-SESSION_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_SAMESITE = 'Lax'
-
 csrf_origins_raw = os.getenv(
     'CSRF_TRUSTED_ORIGINS',
     'http://localhost,http://127.0.0.1,http://localhost:5173,http://localhost:8000'
@@ -191,12 +190,11 @@ csrf_origins_raw = os.getenv(
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in csrf_origins_raw.split(',') if o.strip()]
 
 # CORS Configuration (for decoupled development if Vite runs on port 5173)
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost',
-    'http://127.0.0.1',
-]
+cors_origins_raw = os.getenv(
+    'CORS_ALLOWED_ORIGINS',
+    'http://localhost:5173,http://127.0.0.1:5173,http://localhost,http://127.0.0.1'
+)
+CORS_ALLOWED_ORIGINS = [o.strip() for o in cors_origins_raw.split(',') if o.strip()]
 CORS_ALLOW_CREDENTIALS = True
 
 # LLM / AI Configuration
@@ -206,3 +204,10 @@ LLM_API_KEY = os.getenv('LLM_API_KEY', '').strip()
 LLM_MODEL = os.getenv('LLM_MODEL', 'openai.gpt-oss-20b-1:0')
 AWS_REGION = os.getenv('AWS_REGION', os.getenv('AWS_DEFAULT_REGION', 'us-east-1'))
 LLM_TIMEOUT_SECONDS = float(os.getenv('LLM_TIMEOUT_SECONDS', '10.0'))
+BEDROCK_APP_DAILY_LIMIT = int(os.getenv('BEDROCK_APP_DAILY_LIMIT', '30'))
+BEDROCK_USER_DAILY_LIMIT = int(os.getenv('BEDROCK_USER_DAILY_LIMIT', '5'))
+BEDROCK_ANONYMOUS_DAILY_LIMIT = int(os.getenv('BEDROCK_ANONYMOUS_DAILY_LIMIT', '2'))
+
+# Cross-origin cookie settings are needed when the React app is hosted on Netlify.
+SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
+CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'Lax')

@@ -14,12 +14,14 @@ from .cache import (
     get_cached_search_results,
     set_cached_search_results,
 )
+from .limits import reserve_bedrock_request
 
 logger = logging.getLogger(__name__)
 
 def execute_search_pipeline(
     raw_query: str = "",
-    explicit_filters: Dict[str, Any] = None
+    explicit_filters: Dict[str, Any] = None,
+    request=None,
 ) -> Dict[str, Any]:
     """
     Executes the full discovery search pipeline:
@@ -33,7 +35,16 @@ def execute_search_pipeline(
         explicit_filters = {}
 
     clean_query = raw_query.strip()
+    cache_payload = {"query": clean_query.lower(), "filters": explicit_filters}
+    cached_results = get_cached_search_results(cache_payload)
+    if cached_results:
+        logger.debug("Search response cache hit for query=%r", clean_query)
+        return cached_results
+
     search_mode = 'fallback'
+    ai_message = None
+    cache_output = True
+    cache_plan = True
     plan: SearchPlan
 
     # Check cache for search plan if clean_query is provided
@@ -46,7 +57,17 @@ def execute_search_pipeline(
         llm = LLMProvider()
         llm_plan = None
         if clean_query and llm.is_configured:
-            llm_plan = llm.parse_query(clean_query)
+            if request is not None and llm.provider == 'bedrock':
+                decision = reserve_bedrock_request(request)
+            else:
+                decision = None
+            if decision is None or decision.allowed:
+                llm_plan = llm.parse_query(clean_query)
+                ai_message = llm.fallback_message
+            else:
+                ai_message = decision.message
+                cache_output = decision.message.startswith('AI limits reached for the day for the app')
+                cache_plan = False
 
         if llm_plan:
             plan = llm_plan
@@ -62,7 +83,8 @@ def execute_search_pipeline(
         if clean_query:
             plan_dict = plan.model_dump()
             plan_dict['_mode'] = search_mode
-            set_cached_search_plan(clean_query, plan_dict)
+            if cache_plan and not ai_message:
+                set_cached_search_plan(clean_query, plan_dict)
 
     # Step 2: Merge explicit UI overrides
     if explicit_filters.get('locality'):
@@ -167,11 +189,15 @@ def execute_search_pipeline(
             suggestions.append("Try broadening your keywords or removing some dietary exclusions")
         empty_suggestion = ". ".join(suggestions) + "."
 
-    return {
+    output = {
         "search_plan": plan.model_dump(),
         "search_mode": search_mode,
         "total_results": len(ranked_results),
         "results": ranked_results[:40],
         "empty_suggestion": empty_suggestion,
+        "ai_message": ai_message,
         "is_demo_data": True,
     }
+    if cache_output:
+        set_cached_search_results(cache_payload, output)
+    return output

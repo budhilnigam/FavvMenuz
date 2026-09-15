@@ -9,6 +9,15 @@ from .prompts import SYSTEM_PROMPT, FEW_SHOT_EXAMPLES
 
 logger = logging.getLogger(__name__)
 
+
+def _bedrock_text(response) -> str:
+    """Extract final text while tolerating GPT OSS reasoning content blocks."""
+    blocks = response.get('output', {}).get('message', {}).get('content', [])
+    text_blocks = [block.get('text') for block in blocks if isinstance(block, dict) and block.get('text')]
+    if not text_blocks:
+        raise ValueError(f"Bedrock response contained no text content: {response.get('output', {})}")
+    return '\n'.join(text_blocks).strip()
+
 class LLMProvider:
     def __init__(self):
         self.provider = getattr(settings, 'LLM_PROVIDER', 'bedrock')
@@ -17,6 +26,7 @@ class LLMProvider:
         self.model = getattr(settings, 'LLM_MODEL', 'openai.gpt-oss-20b-1:0')
         self.timeout = getattr(settings, 'LLM_TIMEOUT_SECONDS', 10.0)
         self.aws_region = getattr(settings, 'AWS_REGION', 'us-east-1')
+        self.fallback_message = None
 
     @property
     def is_configured(self) -> bool:
@@ -74,15 +84,19 @@ class LLMProvider:
             return SearchPlan(**parsed_json)
 
         except httpx.TimeoutException:
+            self.fallback_message = "AI service timed out; using deterministic fallback."
             logger.warning("LLM request timed out after %.1f seconds. Falling back to rule parser.", self.timeout)
             return None
         except httpx.HTTPStatusError as exc:
+            self.fallback_message = "AI service is unavailable; using deterministic fallback."
             logger.warning("LLM provider returned HTTP error %d: %s. Falling back.", exc.response.status_code, exc.response.text[:200])
             return None
         except (json.JSONDecodeError, KeyError, ValueError) as exc:
+            self.fallback_message = "AI response was invalid; using deterministic fallback."
             logger.warning("Failed to parse or validate LLM response schema: %s. Falling back.", exc)
             return None
         except Exception as exc:
+            self.fallback_message = "AI service is unavailable; using deterministic fallback."
             logger.error("Unexpected error in LLM provider adapter: %s. Falling back.", exc)
             return None
 
@@ -101,12 +115,13 @@ class LLMProvider:
                 ],
                 inferenceConfig={"temperature": 0.1, "maxTokens": 700},
             )
-            raw_content = response["output"]["message"]["content"][0]["text"].strip()
+            raw_content = _bedrock_text(response)
             raw_content = re.sub(r'^```(?:json)?\s*', '', raw_content)
             raw_content = re.sub(r'\s*```$', '', raw_content)
             parsed_json = json.loads(raw_content)
             parsed_json['query_text'] = query
             return SearchPlan(**parsed_json)
         except Exception as exc:
+            self.fallback_message = "AI service is unavailable; using deterministic fallback."
             logger.warning("Bedrock request failed; using deterministic fallback: %s", exc)
             return None

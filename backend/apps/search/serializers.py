@@ -42,4 +42,5 @@ class SearchResponseSerializer(serializers.Serializer):
     total_results = serializers.IntegerField()
     results = SearchResultItemSerializer(many=True)
     empty_suggestion = serializers.CharField(allow_null=True, allow_blank=True)
+    ai_message = serializers.CharField(allow_null=True, allow_blank=True, required=False)
     is_demo_data = serializers.BooleanField(default=True)

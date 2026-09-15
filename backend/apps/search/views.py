@@ -35,7 +35,7 @@ class SearchView(APIView):
             'sort_by': data.get('sort_by', 'relevance'),
         }
 
-        output = execute_search_pipeline(raw_query=raw_query, explicit_filters=explicit_filters)
+        output = execute_search_pipeline(raw_query=raw_query, explicit_filters=explicit_filters, request=request)
         response_serializer = SearchResponseSerializer(output)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 

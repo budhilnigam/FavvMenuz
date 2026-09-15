@@ -27,7 +27,7 @@ def get_cached_search_plan(query: str) -> Optional[dict]:
         logger.warning("Cache get error (non-fatal): %s", exc)
     return None
 
-def set_cached_search_plan(query: str, plan_dict: dict, timeout: int = 600) -> None:
+def set_cached_search_plan(query: str, plan_dict: dict, timeout: int = 86400) -> None:
     """Cache SearchPlan dict. Fails gracefully."""
     try:
         key = generate_cache_key("plan", query)
@@ -44,8 +44,8 @@ def get_cached_search_results(payload: dict) -> Optional[dict]:
         logger.warning("Cache get error for search results: %s", exc)
     return None
 
-def set_cached_search_results(payload: dict, results_dict: dict, timeout: int = 180) -> None:
-    """Cache search results for 3 minutes. Fails gracefully."""
+def set_cached_search_results(payload: dict, results_dict: dict, timeout: int = 86400) -> None:
+    """Cache static demo search results for 24 hours. Fails gracefully."""
     try:
         key = generate_cache_key("search_results", payload)
         cache.set(key, results_dict, timeout=timeout)

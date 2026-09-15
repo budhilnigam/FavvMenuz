@@ -1,7 +1,6 @@
 """
 FavvMenuz URL Configuration
 """
-from django.contrib import admin
 from django.urls import path, include
 from apps.core.views import health_check
 
@@ -10,7 +9,6 @@ urlpatterns = [
     path('healthz/', health_check, name='health-check'),
 
     # Django Admin
-    path('admin/', admin.site.urls),
 
     # Authentication & User Management
     path('api/auth/', include('apps.accounts.urls')),
