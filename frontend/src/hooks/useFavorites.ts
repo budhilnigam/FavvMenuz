@@ -1,9 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, ReactNode, createElement } from 'react';
 import { FavoriteItem } from '../types/restaurant';
 import { favoritesApi } from '../api/favorites';
 import { useAuth } from './useAuth';
 
-export function useFavorites() {
+interface FavoritesContextValue {
+  favorites: FavoriteItem[];
+  isLoading: boolean;
+  isFavorited: (restaurantId?: number, menuItemId?: number) => boolean;
+  getFavoriteId: (restaurantId?: number, menuItemId?: number) => number | undefined;
+  toggleFavorite: (restaurantId?: number, menuItemId?: number) => Promise<boolean>;
+  removeFavorite: (favoriteId: number) => Promise<void>;
+  refetch: () => Promise<void>;
+}
+
+const FavoritesContext = createContext<FavoritesContextValue | undefined>(undefined);
+
+function useFavoritesInternal(): FavoritesContextValue {
   const { user } = useAuth();
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -74,4 +86,17 @@ export function useFavorites() {
     removeFavorite,
     refetch: fetchFavorites,
   };
+}
+
+export function useFavorites(): FavoritesContextValue {
+  const context = useContext(FavoritesContext);
+  if (!context) {
+    throw new Error('useFavorites must be used within FavoritesProvider');
+  }
+  return context;
+}
+
+export function FavoritesProvider({ children }: { children: ReactNode }) {
+  const value = useFavoritesInternal();
+  return createElement(FavoritesContext.Provider, { value }, children);
 }

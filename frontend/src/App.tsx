@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
+import { FavoritesProvider } from './hooks/useFavorites';
 import { NoticeBanner } from './components/layout/NoticeBanner';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
@@ -16,7 +17,8 @@ export const App: React.FC = () => {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <div className="min-h-screen flex flex-col bg-cream-100 text-ink">
+        <FavoritesProvider>
+          <div className="min-h-screen flex flex-col bg-cream-100 text-ink">
           {/* Top Demo Simulation Notice */}
           <NoticeBanner />
 
@@ -38,7 +40,8 @@ export const App: React.FC = () => {
 
           {/* Footer */}
           <Footer />
-        </div>
+          </div>
+        </FavoritesProvider>
       </AuthProvider>
     </BrowserRouter>
   );

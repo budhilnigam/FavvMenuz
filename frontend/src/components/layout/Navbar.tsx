@@ -94,6 +94,21 @@ export const Navbar: React.FC = () => {
           )}
         </div>
       </div>
+      <nav className="md:hidden grid grid-cols-3 border-t-2 border-black bg-cream-100" aria-label="Mobile navigation">
+        <Link to="/" className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-black uppercase ${isActive('/') ? 'bg-electric-yellow' : ''}`}>
+          <Compass className="w-4 h-4" />
+          Discover
+        </Link>
+        <Link to="/search" className={`flex flex-col items-center gap-0.5 border-x-2 border-black py-2 text-[11px] font-black uppercase ${isActive('/search') ? 'bg-electric-yellow' : ''}`}>
+          <Search className="w-4 h-4" />
+          Search
+        </Link>
+        <Link to="/favorites" className={`relative flex flex-col items-center gap-0.5 py-2 text-[11px] font-black uppercase ${isActive('/favorites') ? 'bg-electric-yellow' : ''}`}>
+          <Bookmark className="w-4 h-4" />
+          Favorites
+          {favorites.length > 0 && <span className="absolute right-5 top-1 rounded-none border border-black bg-coral-500 px-1 text-[9px] text-white">{favorites.length}</span>}
+        </Link>
+      </nav>
     </header>
   );
 };

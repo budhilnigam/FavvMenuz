@@ -1,6 +1,7 @@
 // Native fetch wrapper with CSRF token bootstrapping and cookie session support
 
 let cachedCsrfToken: string | null = null;
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
 function getCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
@@ -33,7 +34,8 @@ export async function apiClient<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${API_BASE_URL}${path}`;
   const headers = new Headers(options.headers || {});
 
   if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {

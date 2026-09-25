@@ -24,9 +24,11 @@ export const SearchPage: React.FC = () => {
     searchMode,
     totalResults,
     emptySuggestion,
+    aiMessage,
     isLoading,
     error,
     execute,
+    refine,
   } = useSearch();
 
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
@@ -66,14 +68,19 @@ export const SearchPage: React.FC = () => {
   }, []);
 
   const handleFilterUpdate = (updated: Partial<SearchPlan>) => {
-    execute({
-      query: query,
-      ...updated,
-    });
+    refine(updated);
   };
 
   const handleResetFilters = () => {
-    execute({ query });
+    refine({
+      locality: null,
+      dietary_tags: [],
+      max_price: null,
+      min_price: null,
+      spice_level: null,
+      max_distance_km: null,
+      sort_by: 'relevance',
+    });
   };
 
   return (
@@ -117,6 +124,12 @@ export const SearchPage: React.FC = () => {
         {/* AI vs Fallback Mode Badge */}
         <ModeBadge mode={searchMode} />
       </div>
+
+      {aiMessage && (
+        <div className="bg-electric-yellow border-2 border-black px-4 py-3 text-sm font-bold shadow-brutal-sm">
+          {aiMessage}
+        </div>
+      )}
 
       {/* Error State */}
       {error && (

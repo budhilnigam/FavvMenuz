@@ -70,8 +70,6 @@ export const Footer: React.FC = () => {
         <div className="border-t-2 border-black pt-6 flex flex-col sm:flex-row items-center justify-between text-xs font-bold gap-4">
           <p>© {new Date().getFullYear()} FavvMenuz. Built with Django, React, Tailwind & Vite.</p>
           <div className="flex items-center gap-4">
-            <a href="/admin/" className="hover:underline text-gray-700">Admin Portal</a>
-            <span>•</span>
             <span className="flex items-center gap-1">
               Made with <Heart className="w-3.5 h-3.5 text-coral-500 fill-coral-500" /> for discovery
             </span>

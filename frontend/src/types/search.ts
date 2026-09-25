@@ -29,6 +29,7 @@ export interface SearchResponse {
   total_results: number;
   results: SearchResultItem[];
   empty_suggestion: string | null;
+  ai_message?: string | null;
   is_demo_data: boolean;
 }
 
