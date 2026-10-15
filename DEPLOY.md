@@ -330,10 +330,10 @@ In your GitHub repository, navigate to **Settings** → **Secrets and variables*
 
 | Secret Name | Value |
 | :--- | :--- |
-| `LIGHTSAIL_HOST` | Your Lightsail static public IP address |
-| `SSH_USERNAME` | `ubuntu` |
+| `LIGHTSAIL_HOST` | `43.204.136.6` (optional because the workflow has this fallback) |
+| `SSH_USERNAME` | `ubuntu` (optional because the workflow has this fallback) |
 | `SSH_PRIVATE_KEY` | Contents of `~/.ssh/favvmenuz_deploy` (including `BEGIN` and `END` headers) |
-| `SSH_KNOWN_HOSTS` | Output from `ssh-keyscan -H <STATIC_IP>` |
+| `SSH_KNOWN_HOSTS` | Output from `ssh-keyscan -H 43.204.136.6` |
 
 ### D. Deployment Trigger
 Whenever code is merged into `main`, GitHub Actions:

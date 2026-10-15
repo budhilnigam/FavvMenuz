@@ -166,8 +166,8 @@ jobs:
 
       - name: Deploy application on Lightsail
         env:
-          HOST: ${{ secrets.LIGHTSAIL_HOST }}
-          USER: ${{ secrets.SSH_USERNAME }}
+          HOST: ${{ secrets.LIGHTSAIL_HOST || '43.204.136.6' }}
+          USER: ${{ secrets.SSH_USERNAME || 'ubuntu' }}
         run: |
           ssh -i ~/.ssh/deploy_key ${USER}@${HOST} << 'EOF'
             set -euo pipefail
@@ -182,9 +182,14 @@ jobs:
             test -f .env || { echo "[ERROR] .env file not found on host!" >&2; exit 1; }
             chmod 600 .env
             
-            echo "[DEPLOY] Building and updating containers..."
+            echo "[DEPLOY] Validating production Compose configuration..."
+            docker compose -f docker-compose.prod.yml config --quiet
+
+            echo "[DEPLOY] Building application images..."
             docker compose -f docker-compose.prod.yml build
-            docker compose -f docker-compose.prod.yml up -d db redis
+
+            echo "[DEPLOY] Starting database and cache and waiting for readiness..."
+            docker compose -f docker-compose.prod.yml up -d --wait --wait-timeout 90 db redis
             
             echo "[DEPLOY] Running migrations..."
             docker compose -f docker-compose.prod.yml run --rm backend python manage.py migrate --no-input
@@ -196,7 +201,7 @@ jobs:
             docker compose -f docker-compose.prod.yml run --rm backend python manage.py seed_demo_data
             
             echo "[DEPLOY] Restarting application services..."
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans --wait --wait-timeout 90
             
             echo "[DEPLOY] Running health check..."
             sleep 5
