@@ -16,7 +16,7 @@ export async function fetchCsrfToken(): Promise<string> {
     return cookieToken;
   }
   try {
-    const res = await fetch('/api/auth/csrf/', { credentials: 'include' });
+    const res = await fetch(`${API_BASE_URL}/api/auth/csrf/`, { credentials: 'include' });
     if (res.ok) {
       const data = await res.json();
       if (data.csrftoken) {

@@ -199,8 +199,9 @@ The AWS deployment can continue running the backend, PostgreSQL, Redis, and Cadd
    - Build command: `npm run build`
    - Publish directory: `frontend/dist` (or `dist` if Base directory is set to `frontend` in the Netlify UI)
 4. Add the Netlify environment variable:
+   For an IP-only HTTP backend, leave `VITE_API_BASE_URL` empty or remove it. The checked-in `frontend/public/_redirects` file proxies `/api/*` through Netlify to `http://43.204.136.6`.
    ```text
-   VITE_API_BASE_URL=https://api.example.com
+   VITE_API_BASE_URL=
    ```
 5. Add a Netlify rewrite so React Router routes work. Create `frontend/public/_redirects` with:
    ```text
